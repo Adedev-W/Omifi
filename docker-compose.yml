@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      CV_BACKEND_HOST: 0.0.0.0
+      CV_BACKEND_PORT: 8080
+      CV_PUBLIC_BASE_URL: ${CV_PUBLIC_BASE_URL:-http://localhost:8080}
+      CV_ARTIFACT_DIR: /app/data/artifacts
+      CV_WORKSPACE_ROOT: /app
+      LATEX_BACKEND_URL: http://localhost:8080
+    volumes:
+      - cv-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  cv-data:

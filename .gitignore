@@ -1,0 +1,14 @@
+.env
+.bob/mcp.json
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+data/
+*.py[cod]
+AGENTS.md
+.codex
+.venv-langflow

@@ -1,0 +1,14 @@
+.env
+.git
+.gitignore
+.venv
+.venv-langflow
+__pycache__
+.pytest_cache
+data
+*.py[cod]
+tests
+docs
+.bob
+*.tex
+*.png
