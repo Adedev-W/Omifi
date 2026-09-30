@@ -7,6 +7,21 @@ Upload resume → Create document → Edit version → Check and compile
 → Render PDF → Save judge report → Download artifact
 ```
 
+## Visual map of the test flow
+
+![Omifi architecture](assets/omifi-architecture.png)
+
+This architecture image shows which system owns each step. Bob and Langflow
+coordinate the request, while the backend stores the document, versions,
+reports, and generated artifacts. The E2E commands below exercise the backend
+side of that path directly.
+
+![Omifi workflow](assets/omifi-workflow-overview.png)
+
+This workflow image shows the expected product result: source becomes a
+versioned document, the selected version becomes a PDF, and the same version
+receives a judge report.
+
 ## Prerequisites
 
 Run these commands from the repository root:
@@ -29,6 +44,12 @@ export API_KEY='your-shared-api-key'
 Leave `API_KEY` unset when authentication is disabled.
 
 ## 1. Start the backend
+
+![Backend API](assets/backend-api.png)
+
+The backend API is the system under test in this guide. It is responsible for
+authentication, document state, version creation, compilation, artifact
+access, and report persistence.
 
 In a first terminal:
 
@@ -54,6 +75,12 @@ Expected response:
 ```
 
 ## 2. Upload resume source
+
+![MCP file gateway](assets/mcp-file-gateway.png)
+
+In the integrated product, Bob reaches the upload and download endpoints
+through this file gateway. This guide uses `curl` so the same backend
+contract can be tested without requiring a running Bob session.
 
 Create a small LaTeX smoke-test file in `/tmp`:
 
@@ -109,6 +136,12 @@ With XeLaTeX available, the initial version should have
 `compile_status: "success"` and a PDF in `latest_version.artifacts`.
 
 ## 4. Check and compile the source
+
+![Langflow editing flow](assets/langflow-editing-flow.png)
+
+The editing flow normally decides when to retrieve context, validate LaTeX,
+or save a replacement. This section tests the validation and compilation
+operation that the flow ultimately calls.
 
 Run validation and a dry-run compilation:
 
@@ -198,6 +231,12 @@ test "$(file --brief --mime-type /tmp/omifi-e2e.pdf)" = 'application/pdf'
 
 ## 7. Save a judge report
 
+![Langflow judging flow](assets/langflow-judges-flow.png)
+
+The judging flow evaluates a selected document version against a job
+description. The report is stored by version, so later edits do not change the
+evidence for an earlier evaluation.
+
 Save a report for the rendered version:
 
 ```bash
@@ -265,6 +304,12 @@ where the backend is running. Direct artifact downloads still require the API
 key when authentication is enabled.
 
 ## Full Langflow and MCP flow
+
+![Omifi runtime](assets/omifi-runtime.png)
+
+This runtime image shows the complete integration boundary. Bob starts the
+request, Langflow selects and runs the appropriate flow, and Omifi returns the
+authoritative document, version, artifact, and report data.
 
 After the backend E2E flow succeeds, run the integration components in the
 existing Langflow environment described by the system design document. Bob

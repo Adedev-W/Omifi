@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/omifi-logo.svg" alt="Omifi logo" width="320">
+  <img src="docs/assets/omifi-logo.svg" alt="Omifi logo" width="160">
 </p>
 
 <h1 align="center">Omifi</h1>
@@ -11,12 +11,62 @@
 
 ## Overview
 
-Omifi accepts LaTeX source, stores immutable document versions, validates and
-compiles source into PDF artifacts, and stores structured judge reports.
-Langflow runs in its existing environment and communicates with the backend
-over HTTP.
+Omifi is a resume and cover-letter workflow for people who need to revise
+LaTeX documents against a job description without losing previous versions.
+It accepts LaTeX source, validates and compiles it into PDF artifacts, and
+stores structured evaluation reports. Langflow runs in its existing
+environment and communicates with the Omifi backend over HTTP.
 
-![Omifi architecture](docs/assets/omifi-system-design.drawio.svg)
+![Omifi system design](docs/assets/omifi-system-design.drawio.svg)
+
+## What Omifi is and what it solves
+
+### Problem statement
+
+Before Omifi, a resume-editing request typically involved several disconnected
+steps: a person edited a `.tex` file by hand, copied content into an AI
+workflow, compiled the document locally, and kept track of PDF files and
+earlier drafts manually. That process makes it easy to lose a working version,
+overwrite good content, miss a LaTeX error, or submit a resume that does not
+match the job description. The people affected are job seekers, career
+coaches, and teams that prepare multiple tailored applications.
+
+### The product
+
+Omifi provides one controlled workflow for uploading a resume, creating an
+immutable document version, editing the complete source, checking LaTeX,
+rendering a PDF, and saving an evaluation report. The backend owns document
+state and file safety; the AI workflow only requests explicit operations.
+
+### How the solution works
+
+1. A user gives Bob a resume file, job description, or editing request.
+2. Bob sends the request to the appropriate Langflow MCP tool.
+3. Langflow uses the editing or judging component to turn the request into a
+   structured operation.
+4. The Omifi backend validates the payload, stores the source as a new version,
+   compiles it when requested, and returns IDs, status, warnings, and artifact
+   URLs.
+5. The judging flow can compare the resume with the job description and save
+   scores, evidence, gaps, recommendations, and warnings.
+
+### Main benefits
+
+- **No lost drafts:** every edit creates an immutable version.
+- **A reliable PDF result:** LaTeX validation and compilation happen through
+  one backend contract.
+- **Traceable evaluations:** scores and supporting evidence are stored with the
+  document version they describe.
+- **Clear tool boundaries:** Bob handles the conversation, Langflow handles
+  orchestration, and Omifi handles state and file operations.
+- **Safer automation:** source, IDs, compiler status, and errors are explicit
+  instead of being hidden in a chat response.
+
+![Omifi workflow overview](docs/assets/omifi-workflow-overview.png)
+
+The workflow image shows the product path from a user's source document to an
+edited version, a compiled artifact, and an evaluation report. It is the
+shortest view of what Omifi does for an application document.
 
 ## Quick start
 
@@ -48,6 +98,57 @@ Stop the service with `docker compose down`. Use `docker compose down -v` only
 when you also want to remove the database and artifacts.
 
 ## Langflow and MCP
+
+### What Langflow does
+
+Langflow hosts the editing and judging flows. The editing flow chooses whether
+to retrieve context, check LaTeX, create a document, or save a complete
+replacement source. The judging flow retrieves the selected version, can
+search for relevant external context, and prepares a structured report.
+
+![Langflow editing and judging flows](docs/assets/langflow-editing-flow.png)
+
+![Langflow judging flow](docs/assets/langflow-judges-flow.png)
+
+These flow images show the orchestration layer. Langflow does not own the
+canonical document or artifact; it calls the backend tools and passes the
+returned IDs and results to the next step.
+
+### What Bob does
+
+Bob is the user-facing entry point. It receives the user's natural-language
+request, keeps the conversation context, and calls the native MCP tools
+`editing_flow` or `judges_flow`. Bob also uses the file gateway when a user
+uploads or downloads a file.
+
+![Bob and the MCP file gateway](docs/assets/mcp-file-gateway.png)
+
+The file-gateway image represents Bob's file boundary: upload, list, and
+download operations are forwarded to Omifi instead of being stored as
+business state inside Bob.
+
+### How data moves between Bob, Langflow, and Omifi
+
+Bob sends a JSON payload to Langflow through the native MCP connection.
+Langflow calls Omifi's HTTP API with the selected operation and receives
+structured JSON containing document IDs, version IDs, compile status, warnings,
+and artifact metadata. Bob then presents the result to the user and reuses the
+returned IDs for later edits, checks, renders, or evaluations. No component
+should invent IDs or replace a `doc_...` ID with a file ID.
+
+![Omifi runtime integration](docs/assets/omifi-runtime.png)
+
+The runtime image summarizes the deployed boundaries: Bob and Langflow are
+clients of the backend, while SQLite and local storage remain behind the Omifi
+API.
+
+### Final output
+
+The integration ends with a usable application package: a persisted document
+version, a compile result, an optional downloadable PDF artifact, and a judge
+report tied to that exact version. If compilation or web search is unavailable,
+the response still identifies the limitation through an explicit status or
+warning.
 
 Run the existing Langflow environment with the Omifi components:
 
